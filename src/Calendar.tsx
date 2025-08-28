@@ -179,30 +179,30 @@ function MonthCard({
   const weeks = useMemo(() => monthMatrix(year, month), [year, month]);
 
   return (
-    <div className="break-inside-avoid rounded-2xl shadow-xl p-4 md:p-6 bg-white/80 backdrop-blur border border-slate-200">
-      <div className="flex items-center justify-between mb-4">
+    <div className="break-inside-avoid rounded-3xl shadow-2xl p-6 md:p-8 bg-white border border-slate-200/50">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl md:text-2xl font-semibold tracking-tight">{title}</h2>
-          <p className="text-xs text-slate-500 mt-1">Rotação desde {formatISO(startMonday)}</p>
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-800">{title}</h2>
+          <p className="text-sm text-slate-500 mt-2">Rotação desde {formatISO(startMonday)}</p>
         </div>
-        <div className="hidden md:block text-right">
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-indigo-50 text-indigo-700 text-xs border border-indigo-200">
-            Café da manhã
+        <div className="text-right">
+          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-100 text-indigo-800 text-sm font-medium border border-indigo-200">
+            ☕ Café da manhã
           </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-2 text-center text-[11px] md:text-xs font-medium text-slate-600">
+      <div className="grid grid-cols-7 gap-3 text-center text-sm font-semibold text-slate-700 mb-4">
         {["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"].map((w) => (
-          <div key={w} className="py-2 uppercase tracking-wide">{w}</div>
+          <div key={w} className="py-3 uppercase tracking-wide bg-slate-50 rounded-lg">{w}</div>
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-2 text-sm mt-2">
+      <div className="grid grid-cols-7 gap-3 text-base mt-4">
         {weeks.flat().map((cell, i) => {
           if (!cell)
             return (
-              <div key={i} className="aspect-square rounded-xl border border-dashed border-slate-200 bg-slate-50/40" />
+              <div key={i} className="aspect-square rounded-2xl border border-dashed border-slate-200 bg-slate-50/40" />
             );
 
           const iso = formatISO(cell);
@@ -221,32 +221,39 @@ function MonthCard({
               onClick={() => !isBlocked && onEditDay(iso, person)}
               key={i}
               className={
-                "aspect-square rounded-2xl border p-2 flex flex-col items-start justify-between transition-shadow text-left " +
+                "aspect-square rounded-2xl border p-3 flex flex-col items-start justify-between transition-all duration-200 text-left min-h-[80px] " +
                 (isBlocked
                   ? "bg-slate-50 border-slate-200 opacity-75 cursor-not-allowed"
-                  : "bg-white border-slate-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-300")
+                  : "bg-white border-slate-300 hover:shadow-lg hover:border-indigo-300 hover:scale-105 focus:outline-none focus:ring-3 focus:ring-indigo-300/50 cursor-pointer")
               }
             >
-              <div className="flex items-center gap-1 text-[11px] text-slate-500">
-                <span>{cell.getDate()}</span>
+              <div className="flex items-center justify-between w-full text-sm text-slate-700 font-medium">
+                <span className="text-lg font-bold">{cell.getDate()}</span>
                 {holiday && (
-                  <span className="ms-auto inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200 text-[10px]">
-                    Feriado
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200 text-xs font-medium">
+                    🎉 Feriado
                   </span>
                 )}
               </div>
               {!isBlocked && person && (
                 <div
-                  className="text-[11px] md:text-xs mt-auto font-semibold text-slate-800 truncate w-full px-1 py-1 rounded-md"
+                  className="text-sm font-bold text-slate-800 truncate w-full px-2 py-2 rounded-lg mt-2 border"
                   title={person}
-                  style={{ backgroundColor: hashToHsl(person) }}
+                  style={{ 
+                    backgroundColor: hashToHsl(person),
+                    borderColor: `hsl(${(() => {
+                      let h = 0;
+                      for (let i = 0; i < person.length; i++) h = (h * 31 + person.charCodeAt(i)) >>> 0;
+                      return h % 360;
+                    })()} 60% 70%)`
+                  }}
                 >
                   {person}
-                  {overridePerson && <span className="text-[10px] ms-1 opacity-70">(manual)</span>}
+                  {overridePerson && <span className="text-xs ml-1 opacity-80">✏️</span>}
                 </div>
               )}
               {holiday && (
-                <div className="text-[10px] text-slate-600 mt-auto line-clamp-2" title={holiday.nome}>
+                <div className="text-xs text-slate-600 mt-auto line-clamp-2 font-medium" title={holiday.nome}>
                   {holiday.nome}
                 </div>
               )}
@@ -328,14 +335,18 @@ export default function BreakfastDutyCalendar() {
   const manualOverridesCount = Object.keys(overrides).length;
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top_right,theme(colors.indigo.50),theme(colors.slate.100))] text-slate-900 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-slate-100 text-slate-900 p-4 md:p-8">
+      <div className="max-w-[1600px] mx-auto">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-8">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Calendário de Lanche – Café da Manhã</h1>
-            <p className="text-slate-600 mt-1 text-sm">
-              Rodízio em dias úteis (Seg–Sex), pulando feriados <b>BR + ES + Vitória</b>. Clique em um dia para <b>trocar manualmente</b>.
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              ☕ Calendário de Lanche JL
+            </h1>
+            <p className="text-slate-600 mt-2 text-base">
+              Rodízio automático em dias úteis (Seg–Sex), pulando feriados <b>BR + ES + Vitória</b>. 
+              <br />
+              <span className="text-indigo-600 font-medium">💡 Clique em qualquer dia para trocar manualmente</span>
             </p>
           </div>
 
@@ -382,7 +393,7 @@ export default function BreakfastDutyCalendar() {
         </div>
 
         {/* Config Panel */}
-        <div className="grid md:grid-cols-3 gap-4 print:hidden mb-6">
+        <div className="grid md:grid-cols-3 gap-6 print:hidden mb-10">
           <div className="rounded-2xl border bg-white p-4 shadow">
             <label className="block text-sm font-medium mb-1">Data de início</label>
             <input type="date" value={startISO} onChange={(e) => setStartISO(e.target.value)} className="w-full border rounded-xl px-3 py-2" />
@@ -399,7 +410,7 @@ export default function BreakfastDutyCalendar() {
         </div>
 
         {/* Calendars */}
-        <div className="mt-2 grid lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="mt-8 grid lg:grid-cols-2 gap-8">
           {months.map((m) => (
             <div 
               key={m.title} 
@@ -553,7 +564,7 @@ export default function BreakfastDutyCalendar() {
           .xl\\:grid-cols-3 > * { break-inside: avoid; }
           
           /* Melhora a aparência na impressão */
-          .bg-\\[radial-gradient\\(ellipse_at_top_right\\,theme\\(colors\\.indigo\\.50\\)\\,theme\\(colors\\.slate\\.100\\)\\)\\] {
+          .bg-gradient-to-br {
             background: #f8fafc !important;
           }
           

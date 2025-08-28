@@ -108,12 +108,152 @@ function dutyDaysCountBetween(a: Date, b: Date) {
   return count;
 }
 
+// Funções para o sistema aleatório
+function getWeekStart(date: Date): Date {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Ajusta para segunda-feira
+  return new Date(d.setDate(diff));
+}
+
+function getMonthStart(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function getAllDutyDaysInWeek(weekStart: Date): Date[] {
+  const days: Date[] = [];
+  for (let i = 0; i < 7; i++) {
+    const day = addDays(weekStart, i);
+    if (isDutyDay(day)) {
+      days.push(day);
+    }
+  }
+  return days;
+}
+
+function getAllDutyDaysInMonth(monthStart: Date): Date[] {
+  const days: Date[] = [];
+  const year = monthStart.getFullYear();
+  const month = monthStart.getMonth();
+  const lastDay = endOfMonth(year, month);
+  
+  let current = new Date(monthStart);
+  while (current <= lastDay) {
+    if (isDutyDay(current)) {
+      days.push(new Date(current));
+    }
+    current = addDays(current, 1);
+  }
+  return days;
+}
+
+function countPersonInMonth(person: string, monthStart: Date, assignments: Record<string, string>): number {
+  const monthDays = getAllDutyDaysInMonth(monthStart);
+  return monthDays.filter(day => assignments[formatISO(day)] === person).length;
+}
+
+function getAssignmentsInWeek(weekStart: Date, assignments: Record<string, string>): string[] {
+  const weekDays = getAllDutyDaysInWeek(weekStart);
+  return weekDays.map(day => assignments[formatISO(day)]).filter(Boolean);
+}
+
+// Seeded random para resultados consistentes
+function seededRandom(seed: string): number {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    const char = seed.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  const x = Math.sin(Math.abs(hash)) * 10000;
+  return x - Math.floor(x);
+}
+
 function assignmentIndex(startMonday: Date, targetDate: Date, peopleCount: number) {
   // Índice rotativo baseado nos DIAS DE ESCALA transcorridos desde o start
   if (!isDutyDay(targetDate)) return null;
   const prevDay = addDays(targetDate, -1);
   const dutyUntilPrev = dutyDaysCountBetween(startMonday, prevDay);
   return peopleCount > 0 ? dutyUntilPrev % peopleCount : 0;
+}
+
+function randomAssignment(
+  targetDate: Date, 
+  people: string[], 
+  overrides: Record<string, string>,
+  months: Array<{ year: number; month: number }>
+): string | null {
+  if (!isDutyDay(targetDate) || people.length === 0) return null;
+  
+  // Gera todas as atribuições automáticas para todos os meses
+  const allAssignments: Record<string, string> = {};
+  
+  // Para cada mês, gera atribuições respeitando as restrições
+  for (const monthInfo of months) {
+    const monthStart = new Date(monthInfo.year, monthInfo.month, 1);
+    const monthDays = getAllDutyDaysInMonth(monthStart);
+    
+    // Agrupar dias por semana
+    const weekGroups: Record<string, Date[]> = {};
+    monthDays.forEach(day => {
+      const weekKey = formatISO(getWeekStart(day));
+      if (!weekGroups[weekKey]) weekGroups[weekKey] = [];
+      weekGroups[weekKey].push(day);
+    });
+    
+    // Contador de atribuições por pessoa no mês
+    const monthCounter: Record<string, number> = {};
+    people.forEach(person => monthCounter[person] = 0);
+    
+    // Para cada semana do mês
+    Object.keys(weekGroups).sort().forEach(weekKey => {
+      const weekDays = weekGroups[weekKey].sort((a, b) => a.getTime() - b.getTime());
+      const usedInWeek = new Set<string>();
+      
+      weekDays.forEach(day => {
+        const dayISO = formatISO(day);
+        
+        // Se já tem override, usa o override
+        if (overrides[dayISO]) {
+          allAssignments[dayISO] = overrides[dayISO];
+          usedInWeek.add(overrides[dayISO]);
+          monthCounter[overrides[dayISO]] = (monthCounter[overrides[dayISO]] || 0) + 1;
+          return;
+        }
+        
+        // Filtra pessoas disponíveis
+        const available = people.filter(person => {
+          // Não pode ter sido usada na semana
+          if (usedInWeek.has(person)) return false;
+          // Não pode exceder 2 vezes no mês
+          if ((monthCounter[person] || 0) >= 2) return false;
+          return true;
+        });
+        
+        if (available.length === 0) {
+          // Se não há ninguém disponível, relaxa a regra da semana
+          const monthAvailable = people.filter(person => (monthCounter[person] || 0) < 2);
+          if (monthAvailable.length > 0) {
+            const seed = dayISO + people.join(',');
+            const randomIndex = Math.floor(seededRandom(seed) * monthAvailable.length);
+            const chosen = monthAvailable[randomIndex];
+            allAssignments[dayISO] = chosen;
+            monthCounter[chosen] = (monthCounter[chosen] || 0) + 1;
+          }
+        } else {
+          // Escolhe aleatoriamente entre os disponíveis
+          const seed = dayISO + available.join(',');
+          const randomIndex = Math.floor(seededRandom(seed) * available.length);
+          const chosen = available[randomIndex];
+          allAssignments[dayISO] = chosen;
+          usedInWeek.add(chosen);
+          monthCounter[chosen] = (monthCounter[chosen] || 0) + 1;
+        }
+      });
+    });
+  }
+  
+  return allAssignments[formatISO(targetDate)] || null;
 }
 
 function hashToHsl(str: string) {
@@ -171,10 +311,12 @@ function Modal({ open, onClose, children, title }: { open: boolean; onClose: () 
 }
 
 function MonthCard({
-  title, year, month, startMonday, people, getOverride, onEditDay
+  title, year, month, startMonday, people, getOverride, onEditDay, randomMode, overrides, months
 }: {
   title: string; year: number; month: number; startMonday: Date; people: string[];
   getOverride: (iso: string) => string; onEditDay: (iso: string, person: string) => void;
+  randomMode: boolean; overrides: Record<string, string>; 
+  months: Array<{ year: number; month: number }>;
 }) {
   const weeks = useMemo(() => monthMatrix(year, month), [year, month]);
 
@@ -210,8 +352,15 @@ function MonthCard({
           const isWeekendDay = !isWeekday(cell);
           const isBlocked = isWeekendDay || !!holiday;
 
-          const idx = !isBlocked ? assignmentIndex(startMonday, cell, people.length || 1) : null;
-          const autoPerson = idx !== null ? people[idx] : "";
+          let autoPerson = "";
+          if (!isBlocked) {
+            if (randomMode) {
+              autoPerson = randomAssignment(cell, people, overrides, months) || "";
+            } else {
+              const idx = assignmentIndex(startMonday, cell, people.length || 1);
+              autoPerson = idx !== null ? people[idx] : "";
+            }
+          }
           const overridePerson = getOverride(iso);
           const person = overridePerson || autoPerson;
 
@@ -237,7 +386,7 @@ function MonthCard({
               </div>
               {!isBlocked && person && (
                 <div
-                  className="text-sm font-bold text-slate-800 truncate w-full px-2 py-2 rounded-lg mt-2 border"
+                  className="text-xs font-bold text-slate-800 w-full px-2 py-1.5 rounded-lg mt-2 border break-words text-center leading-tight"
                   title={person}
                   style={{ 
                     backgroundColor: hashToHsl(person),
@@ -274,6 +423,7 @@ export default function BreakfastDutyCalendar() {
   const [printLoading, setPrintLoading] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [selectedMonths, setSelectedMonths] = useState<Set<string>>(new Set(['setembro', 'outubro', 'novembro', 'dezembro']));
+  const [randomMode, setRandomMode] = useState(true); // Modo aleatório ativado por padrão
 
   // Load overrides
   useEffect(() => {
@@ -306,6 +456,8 @@ export default function BreakfastDutyCalendar() {
     { title: "Novembro/2025", year: NOV_2025.year, month: NOV_2025.month, key: 'novembro' },
     { title: "Dezembro/2025", year: DEC_2025.year, month: DEC_2025.month, key: 'dezembro' },
   ];
+
+  const monthsForAssignment = months.map(m => ({ year: m.year, month: m.month }));
 
   const getOverride = (iso: string) => overrides[iso] || "";
   const applyOverride = (iso: string, person: string) => setOverrides((prev) => ({ ...prev, [iso]: person }));
@@ -344,7 +496,19 @@ export default function BreakfastDutyCalendar() {
               ☕ Calendário de Lanche JL
             </h1>
             <p className="text-slate-600 mt-2 text-base">
-              Rodízio automático em dias úteis (Seg–Sex), pulando feriados <b>BR + ES + Vitória</b>. 
+              {randomMode ? (
+                <>
+                  Distribuição <b>aleatória</b> em dias úteis (Seg–Sex), pulando feriados <b>BR + ES + Vitória</b>.
+                  <br />
+                  <span className="text-emerald-600 font-medium">🎯 Sem repetição na mesma semana • Máximo 2x por mês</span>
+                </>
+              ) : (
+                <>
+                  Rodízio <b>sequencial</b> em dias úteis (Seg–Sex), pulando feriados <b>BR + ES + Vitória</b>.
+                  <br />
+                  <span className="text-blue-600 font-medium">🔄 Rotação em ordem da lista</span>
+                </>
+              )}
               <br />
               <span className="text-indigo-600 font-medium">💡 Clique em qualquer dia para trocar manualmente</span>
             </p>
@@ -393,11 +557,39 @@ export default function BreakfastDutyCalendar() {
         </div>
 
         {/* Config Panel */}
-        <div className="grid md:grid-cols-3 gap-6 print:hidden mb-10">
+        <div className="grid md:grid-cols-4 gap-6 print:hidden mb-10">
           <div className="rounded-2xl border bg-white p-4 shadow">
             <label className="block text-sm font-medium mb-1">Data de início</label>
             <input type="date" value={startISO} onChange={(e) => setStartISO(e.target.value)} className="w-full border rounded-xl px-3 py-2" />
             <p className="text-xs text-slate-500 mt-2">Padrão: 2025-08-25 (segunda).</p>
+          </div>
+          <div className="rounded-2xl border bg-white p-4 shadow">
+            <label className="block text-sm font-medium mb-3">Modo de distribuição</label>
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="mode"
+                  checked={randomMode}
+                  onChange={() => setRandomMode(true)}
+                  className="w-4 h-4 text-indigo-600"
+                />
+                <span className="text-sm">🎲 Aleatório</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="mode"
+                  checked={!randomMode}
+                  onChange={() => setRandomMode(false)}
+                  className="w-4 h-4 text-indigo-600"
+                />
+                <span className="text-sm">🔄 Sequencial</span>
+              </label>
+            </div>
+            <p className="text-xs text-slate-500 mt-2">
+              {randomMode ? "Distribuição aleatória respeitando restrições" : "Rotação em ordem sequencial"}
+            </p>
           </div>
           <div className="rounded-2xl border bg-white p-4 shadow md:col-span-2">
             <div className="flex items-center justify-between mb-2">
@@ -424,6 +616,9 @@ export default function BreakfastDutyCalendar() {
                 people={people}
                 getOverride={getOverride}
                 onEditDay={(iso, current) => setEditing({ iso, person: current })}
+                randomMode={randomMode}
+                overrides={overrides}
+                months={monthsForAssignment}
               />
             </div>
           ))}

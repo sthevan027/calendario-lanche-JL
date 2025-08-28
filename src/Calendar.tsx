@@ -430,7 +430,7 @@ export default function BreakfastDutyCalendar() {
             <label className="block text-sm">Selecionar pessoa</label>
             <select
               value={editing.person || ""}
-              onChange={(e) => setEditing((prev) => ({ ...prev, person: e.target.value }))}
+              onChange={(e) => setEditing((prev) => prev ? { iso: prev.iso, person: e.target.value } : null)}
               className="w-full border rounded-xl px-3 py-2"
             >
               <option value="">— Sem responsável —</option>
@@ -636,7 +636,7 @@ function runTests() {
     if (typeof window === "undefined") return; // só no browser
     const isLocalhost = /^(localhost|127\\.0\\.0\\.1)$/i.test(window.location.hostname);
     const qsTest = new URLSearchParams(window.location.search).get("test") === "1";
-    if ((isLocalhost || qsTest) && !window.__BREAKFAST_CAL_TESTED__) {
+    if ((isLocalhost || qsTest) && !(window as any).__BREAKFAST_CAL_TESTED__) {
       runTests();
       (window as any).__BREAKFAST_CAL_TESTED__ = true;
     }

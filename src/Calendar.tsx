@@ -265,6 +265,8 @@ export default function BreakfastDutyCalendar() {
   const [editing, setEditing] = useState<{ iso: string; person: string } | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [printLoading, setPrintLoading] = useState(false);
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [selectedMonths, setSelectedMonths] = useState<Set<string>>(new Set(['setembro', 'outubro', 'novembro', 'dezembro']));
 
   // Load overrides
   useEffect(() => {
@@ -292,10 +294,10 @@ export default function BreakfastDutyCalendar() {
 
   const startMonday = useMemo(() => new Date(startISO + "T00:00:00"), [startISO]);
   const months = [
-    { title: "Setembro/2025", year: SEP_2025.year, month: SEP_2025.month },
-    { title: "Outubro/2025", year: OCT_2025.year, month: OCT_2025.month },
-    { title: "Novembro/2025", year: NOV_2025.year, month: NOV_2025.month },
-    { title: "Dezembro/2025", year: DEC_2025.year, month: DEC_2025.month },
+    { title: "Setembro/2025", year: SEP_2025.year, month: SEP_2025.month, key: 'setembro' },
+    { title: "Outubro/2025", year: OCT_2025.year, month: OCT_2025.month, key: 'outubro' },
+    { title: "Novembro/2025", year: NOV_2025.year, month: NOV_2025.month, key: 'novembro' },
+    { title: "Dezembro/2025", year: DEC_2025.year, month: DEC_2025.month, key: 'dezembro' },
   ];
 
   const getOverride = (iso: string) => overrides[iso] || "";
@@ -318,6 +320,7 @@ export default function BreakfastDutyCalendar() {
       alert('Erro ao imprimir. Tente novamente.');
     } finally {
       setPrintLoading(false);
+      setShowPrintModal(false);
     }
   };
 
@@ -338,7 +341,7 @@ export default function BreakfastDutyCalendar() {
 
           <div className="flex gap-2 print:hidden">
             <button 
-              onClick={handlePrint} 
+              onClick={() => setShowPrintModal(true)} 
               disabled={printLoading}
               className="px-4 py-2 rounded-xl border bg-white hover:bg-slate-50 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
@@ -398,16 +401,20 @@ export default function BreakfastDutyCalendar() {
         {/* Calendars */}
         <div className="mt-2 grid lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {months.map((m) => (
-            <MonthCard
-              key={m.title}
-              title={m.title}
-              year={m.year}
-              month={m.month}
-              startMonday={startMonday}
-              people={people}
-              getOverride={getOverride}
-              onEditDay={(iso, current) => setEditing({ iso, person: current })}
-            />
+            <div 
+              key={m.title} 
+              className={selectedMonths.has(m.key) ? '' : 'print:hidden'}
+            >
+              <MonthCard
+                title={m.title}
+                year={m.year}
+                month={m.month}
+                startMonday={startMonday}
+                people={people}
+                getOverride={getOverride}
+                onEditDay={(iso, current) => setEditing({ iso, person: current })}
+              />
+            </div>
           ))}
         </div>
 
@@ -470,6 +477,54 @@ export default function BreakfastDutyCalendar() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
               Sim, limpar todas
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal de seleção de meses para impressão */}
+      <Modal open={showPrintModal} onClose={() => setShowPrintModal(false)} title="Selecionar meses para impressão">
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Selecione quais meses deseja incluir na impressão:
+          </p>
+          <div className="space-y-2">
+            {months.map((month) => (
+              <label key={month.key} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedMonths.has(month.key)}
+                  onChange={(e) => {
+                    const newSelected = new Set(selectedMonths);
+                    if (e.target.checked) {
+                      newSelected.add(month.key);
+                    } else {
+                      newSelected.delete(month.key);
+                    }
+                    setSelectedMonths(newSelected);
+                  }}
+                  className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                />
+                <span className="text-sm font-medium">{month.title}</span>
+              </label>
+            ))}
+          </div>
+          <div className="flex items-center justify-end gap-3 pt-4">
+            <button 
+              onClick={() => setShowPrintModal(false)} 
+              className="px-4 py-2 rounded-xl border bg-white hover:bg-slate-50 text-gray-700"
+            >
+              Cancelar
+            </button>
+            <button 
+              onClick={handlePrint} 
+              disabled={selectedMonths.size === 0}
+              className="px-4 py-2 rounded-xl border bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              Imprimir {selectedMonths.size} mês{selectedMonths.size !== 1 ? 'es' : ''}
             </button>
           </div>
         </div>

@@ -480,6 +480,7 @@ export default function BreakfastDutyCalendar() {
   const today = new Date();
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
+  const [printingMode, setPrintingMode] = useState(false);
 
   // Load overrides
   useEffect(() => {
@@ -540,6 +541,7 @@ export default function BreakfastDutyCalendar() {
   const handlePrint = async () => {
     setPrintLoading(true);
     try {
+      setPrintingMode(true);
       // Aguarda um momento para garantir que o estado foi atualizado
       await new Promise(resolve => setTimeout(resolve, 100));
       window.print();
@@ -549,6 +551,7 @@ export default function BreakfastDutyCalendar() {
     } finally {
       setPrintLoading(false);
       setShowPrintModal(false);
+      setPrintingMode(false);
     }
   };
 
@@ -559,7 +562,7 @@ export default function BreakfastDutyCalendar() {
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-slate-100 text-slate-900">
       <div className="container mx-auto px-4 py-6 lg:px-6 xl:px-8 max-w-full">
         {/* Header compacto (como a primeira imagem) */}
-        <div className="mb-8 flex items-start justify-between gap-6">
+        <div className="mb-8 flex items-start justify-between gap-6 print:hidden">
           <div className="max-w-4xl">
             <h1 className="text-3xl font-bold tracking-tight text-slate-900">
               Calendário de Lanche JL
@@ -686,7 +689,9 @@ export default function BreakfastDutyCalendar() {
 
         {/* Calendário — Empilhar meses em sequência (minimalista) */}
         <div className="mt-8 max-w-[1100px] mx-auto space-y-8">
-          {months.map((m) => (
+          {months
+            .filter((m) => !printingMode || selectedMonths.has(m.key))
+            .map((m) => (
             <MonthCard
               key={m.title}
               title={m.title}
@@ -705,7 +710,7 @@ export default function BreakfastDutyCalendar() {
           ))}
         </div>
 
-        <footer className="text-center mt-16 print:mt-8">
+        <footer className="text-center mt-16 print:hidden">
           <div className="bg-white rounded-3xl shadow-xl p-6 mx-auto max-w-2xl border border-slate-200/50">
             <p className="text-lg font-semibold text-slate-700 mb-2">
               ☕ Sistema de Escala JL

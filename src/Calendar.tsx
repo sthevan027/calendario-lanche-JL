@@ -324,7 +324,7 @@ function Legend({ people }: { people: string[] }) {
 function Modal({ open, onClose, children, title }: { open: boolean; onClose: () => void; children: React.ReactNode; title: string }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 print:hidden">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div className="relative z-10 w-full max-w-lg rounded-3xl border-2 bg-white p-8 shadow-2xl">
         <div className="flex items-center justify-between mb-6">
@@ -542,15 +542,15 @@ export default function BreakfastDutyCalendar() {
     setPrintLoading(true);
     try {
       setPrintingMode(true);
-      // Aguarda um momento para garantir que o estado foi atualizado
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Fecha o modal e aguarda o DOM estabilizar
+      setShowPrintModal(false);
+      await new Promise(resolve => setTimeout(resolve, 150));
       window.print();
     } catch (error) {
       console.error('Erro ao imprimir:', error);
       alert('Erro ao imprimir. Tente novamente.');
     } finally {
       setPrintLoading(false);
-      setShowPrintModal(false);
       setPrintingMode(false);
     }
   };
@@ -855,7 +855,8 @@ export default function BreakfastDutyCalendar() {
           }
           .break-inside-avoid { break-inside: avoid; }
           @page { 
-            size: A4 portrait; 
+            /* Força retrato (vertical). Alguns navegadores respeitam melhor tamanho explícito */
+            size: 210mm 297mm; /* A4 em retrato */
             margin: 15mm; 
           }
           /* Evita cortar meses entre páginas */

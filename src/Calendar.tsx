@@ -419,7 +419,12 @@ function MonthCard({
               title={!isBlocked && person ? person : holiday ? holiday.nome : undefined}
             >
               {minimal ? (
-                <div className="text-sm text-slate-800 font-medium">{cell.getDate()}</div>
+                <div className="flex flex-col h-full">
+                  <div className="text-sm text-slate-800 font-medium">{cell.getDate()}</div>
+                  {!isBlocked && person && (
+                    <div className="mt-1 text-[10px] text-slate-700 leading-tight pr-1 line-clamp-2">{person}</div>
+                  )}
+                </div>
               ) : (
                 <>
                   <div className="flex items-center justify-between w-full text-base lg:text-lg text-slate-700 font-medium">
@@ -553,80 +558,72 @@ export default function BreakfastDutyCalendar() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-slate-100 text-slate-900">
       <div className="container mx-auto px-4 py-6 lg:px-6 xl:px-8 max-w-full">
-        {/* Header */}
-        <div className="text-center mb-12 lg:mb-16">
-          <div className="max-w-4xl mx-auto">
-            <h1 className="text-5xl lg:text-6xl xl:text-7xl font-bold tracking-tight bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 bg-clip-text text-transparent mb-6">
-              ☕ Calendário de Lanche JL
+        {/* Header compacto (como a primeira imagem) */}
+        <div className="mb-8 flex items-start justify-between gap-6">
+          <div className="max-w-4xl">
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+              Calendário de Lanche JL
             </h1>
-            <div className="bg-white rounded-3xl shadow-2xl p-6 lg:p-8 border border-slate-200/50">
-              <p className="text-slate-600 text-lg lg:text-xl leading-relaxed">
-                {randomMode ? (
-                  <>
-                    Distribuição <span className="font-bold text-emerald-700">aleatória</span> em dias úteis (Seg–Sex), pulando feriados <span className="font-bold">BR + ES + Vitória</span>.
-                    <br />
-                    <span className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-emerald-100 text-emerald-700 rounded-full font-semibold">
-                      🎯 Sem repetição na mesma semana • Máximo 2x por mês
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    Rodízio <span className="font-bold text-blue-700">sequencial</span> em dias úteis (Seg–Sex), pulando feriados <span className="font-bold">BR + ES + Vitória</span>.
-                    <br />
-                    <span className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-blue-100 text-blue-700 rounded-full font-semibold">
-                      🔄 Rotação em ordem da lista
-                    </span>
-                  </>
-                )}
-                <br />
-                <span className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-indigo-100 text-indigo-700 rounded-full font-semibold">
-                  💡 Clique em qualquer dia para trocar manualmente
-                </span>
-              </p>
+            <p className="text-slate-600 mt-2 text-sm">
+              {randomMode ? (
+                <>
+                  Distribuição <span className="font-semibold text-emerald-700">aleatória</span> em dias úteis (Seg–Sex), pulando feriados <span className="font-semibold">BR + ES + Vitória</span>.
+                </>
+              ) : (
+                <>
+                  Rodízio <span className="font-semibold text-blue-700">sequencial</span> em dias úteis (Seg–Sex), pulando feriados <span className="font-semibold">BR + ES + Vitória</span>.
+                </>
+              )}
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+                🎯 Sem repetição na mesma semana • Máximo 2x por mês
+              </span>
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 border border-indigo-200">
+                💡 Clique em qualquer dia para trocar manualmente
+              </span>
             </div>
           </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex justify-center gap-6 mb-12 print:hidden">
-          <button 
-            onClick={() => setShowPrintModal(true)} 
-            disabled={printLoading}
-            className="px-8 py-4 rounded-2xl border-2 bg-white hover:bg-slate-50 shadow-xl hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3 text-lg font-semibold transition-all hover:scale-105"
-          >
-            {printLoading ? (
-              <>
-                <svg className="animate-spin h-6 w-6" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                </svg>
-                Imprimindo...
-              </>
-            ) : (
-              <>
-                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                </svg>
-                🖨️ Imprimir
-              </>
-            )}
-          </button>
-          <button 
-            onClick={() => setShowClearConfirm(true)} 
-            disabled={manualOverridesCount === 0}
-            className="px-8 py-4 rounded-2xl border-2 bg-white hover:bg-slate-50 shadow-xl hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3 text-lg font-semibold transition-all hover:scale-105" 
-            title={`Remover todas as ${manualOverridesCount} trocas manuais`}
-          >
-            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-            🗑️ Limpar trocas
-            {manualOverridesCount > 0 && (
-              <span className="inline-flex items-center justify-center px-3 py-1 text-sm font-bold leading-none text-red-100 bg-red-600 rounded-full">
-                {manualOverridesCount}
-              </span>
-            )}
-          </button>
+          <div className="flex gap-2 print:hidden">
+            <button 
+              onClick={() => setShowPrintModal(true)} 
+              disabled={printLoading}
+              className="px-4 py-2 rounded-xl border bg-white hover:bg-slate-50 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {printLoading ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                  </svg>
+                  Imprimindo...
+                </>
+              ) : (
+                <>
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                  </svg>
+                  Imprimir
+                </>
+              )}
+            </button>
+            <button 
+              onClick={() => setShowClearConfirm(true)} 
+              disabled={manualOverridesCount === 0}
+              className="px-3 py-2 rounded-xl border bg-white hover:bg-slate-50 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2" 
+              title={`Remover todas as ${manualOverridesCount} trocas manuais`}
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Limpar trocas
+              {manualOverridesCount > 0 && (
+                <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full">
+                  {manualOverridesCount}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Config Panel */}
@@ -687,27 +684,25 @@ export default function BreakfastDutyCalendar() {
           </div>
         </div>
 
-        {/* Calendário — Mês único, estilo minimalista da referência */}
-        <div className="mt-8 max-w-[1100px] mx-auto">
-          <div className="flex items-center justify-between mb-4">
-            <button onClick={() => goPrevMonth()} className="px-4 py-2 rounded-lg border bg-white hover:bg-slate-50">◀</button>
-            <div className="text-lg font-semibold text-slate-800">{minimalTitle}</div>
-            <button onClick={() => goNextMonth()} className="px-4 py-2 rounded-lg border bg-white hover:bg-slate-50">▶</button>
-          </div>
-          <MonthCard
-            title={minimalTitle}
-            year={currentYear}
-            month={currentMonth}
-            startMonday={startMonday}
-            people={people}
-            getOverride={getOverride}
-            onEditDay={(iso, current) => setEditing({ iso, person: current })}
-            randomMode={randomMode}
-            overrides={overrides}
-            months={[{year: currentYear, month: currentMonth}]}
-            minimal={true}
-            sundayFirst={true}
-          />
+        {/* Calendário — Empilhar meses em sequência (minimalista) */}
+        <div className="mt-8 max-w-[1100px] mx-auto space-y-8">
+          {months.map((m) => (
+            <MonthCard
+              key={m.title}
+              title={m.title}
+              year={m.year}
+              month={m.month}
+              startMonday={startMonday}
+              people={people}
+              getOverride={getOverride}
+              onEditDay={(iso, current) => setEditing({ iso, person: current })}
+              randomMode={randomMode}
+              overrides={overrides}
+              months={monthsForAssignment}
+              minimal={true}
+              sundayFirst={true}
+            />
+          ))}
         </div>
 
         <footer className="text-center mt-16 print:mt-8">

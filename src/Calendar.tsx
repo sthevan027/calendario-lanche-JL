@@ -96,6 +96,23 @@ function monthMatrix(year: number, month: number) {
   return weeks;
 }
 
+// Matriz do mês iniciando no DOMINGO (para layout minimalista)
+function monthMatrixSundayFirst(year: number, month: number) {
+  const first = startOfMonth(year, month);
+  const last = endOfMonth(year, month);
+  const firstWeekdayIndex = first.getDay(); // 0=Dom, 1=Seg, ... 6=Sab
+
+  const daysInMonth = last.getDate();
+  const cells: (Date | null)[] = [];
+  for (let i = 0; i < firstWeekdayIndex; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const weeks: (Date | null)[][] = [];
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+  return weeks;
+}
+
 function dutyDaysCountBetween(a: Date, b: Date) {
   // Conta DIAS DE ESCALA (úteis e sem feriado) entre a (inclusive) e b (inclusive)
   let count = 0;
@@ -326,40 +343,49 @@ function Modal({ open, onClose, children, title }: { open: boolean; onClose: () 
 }
 
 function MonthCard({
-  title, year, month, startMonday, people, getOverride, onEditDay, randomMode, overrides, months
+  title, year, month, startMonday, people, getOverride, onEditDay, randomMode, overrides, months, minimal, sundayFirst
 }: {
   title: string; year: number; month: number; startMonday: Date; people: string[];
   getOverride: (iso: string) => string; onEditDay: (iso: string, person: string) => void;
   randomMode: boolean; overrides: Record<string, string>; 
   months: Array<{ year: number; month: number }>;
+  minimal?: boolean; sundayFirst?: boolean;
 }) {
-  const weeks = useMemo(() => monthMatrix(year, month), [year, month]);
+  const weeks = useMemo(() => (sundayFirst ? monthMatrixSundayFirst(year, month) : monthMatrix(year, month)), [year, month, sundayFirst]);
 
   return (
-    <div className="break-inside-avoid rounded-3xl shadow-2xl p-6 lg:p-8 xl:p-10 bg-white border border-slate-200/50 h-full">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h2 className="text-3xl lg:text-4xl xl:text-5xl font-bold tracking-tight text-slate-800">{title}</h2>
-          <p className="text-base text-slate-500 mt-3">Rotação desde {formatISO(startMonday)}</p>
+    <div className={minimal ? "rounded-2xl bg-white border border-slate-300 overflow-hidden" : "break-inside-avoid rounded-3xl shadow-2xl p-6 lg:p-8 xl:p-10 bg-white border border-slate-200/50 h-full"}>
+      {minimal ? (
+        <div className="relative">
+          <div className="h-14 bg-black text-white flex items-center px-5 text-sm font-semibold tracking-wide" style={{clipPath: "polygon(0 0, 85% 0, 80% 100%, 0% 100%)"}}>
+            {title.toUpperCase()}
+          </div>
         </div>
-        <div className="text-right">
-          <span className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-indigo-100 text-indigo-800 text-base font-medium border border-indigo-200">
-            ☕ Café da manhã
-          </span>
+      ) : (
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h2 className="text-3xl lg:text-4xl xl:text-5xl font-bold tracking-tight text-slate-800">{title}</h2>
+            <p className="text-base text-slate-500 mt-3">Rotação desde {formatISO(startMonday)}</p>
+          </div>
+          <div className="text-right">
+            <span className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-indigo-100 text-indigo-800 text-base font-medium border border-indigo-200">
+              ☕ Café da manhã
+            </span>
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className="grid grid-cols-7 gap-4 lg:gap-6 text-center text-base font-semibold text-slate-700 mb-6">
-        {["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"].map((w) => (
-          <div key={w} className="py-4 lg:py-5 uppercase tracking-wide bg-slate-50 rounded-xl text-lg">{w}</div>
+      <div className={minimal ? "grid grid-cols-7 border-t border-slate-300" : "grid grid-cols-7 gap-4 lg:gap-6 text-center text-base font-semibold text-slate-700 mb-6"}>
+        {(sundayFirst ? ["DOM","SEG","TER","QUA","QUI","SEX","SÁB"] : ["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"]).map((w) => (
+          <div key={w} className={minimal ? "py-3 text-xs font-semibold uppercase tracking-wide text-slate-700 border-b border-slate-300 text-center" : "py-4 lg:py-5 uppercase tracking-wide bg-slate-50 rounded-xl text-lg"}>{w}</div>
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-4 lg:gap-6 text-base mt-6">
+      <div className={minimal ? "grid grid-cols-7" : "grid grid-cols-7 gap-4 lg:gap-6 text-base mt-6"}>
         {weeks.flat().map((cell, i) => {
           if (!cell)
             return (
-              <div key={i} className="aspect-square rounded-2xl border border-dashed border-slate-200 bg-slate-50/40" />
+              <div key={i} className={minimal ? "aspect-[1/1] border border-slate-300 bg-white" : "aspect-square rounded-2xl border border-dashed border-slate-200 bg-slate-50/40"} />
             );
 
           const iso = formatISO(cell);
@@ -384,42 +410,49 @@ function MonthCard({
               type="button"
               onClick={() => !isBlocked && onEditDay(iso, person)}
               key={i}
-              className={
-                "aspect-square rounded-2xl border p-4 lg:p-5 xl:p-6 flex flex-col items-start justify-between transition-all duration-200 text-left min-h-[100px] lg:min-h-[120px] xl:min-h-[140px] " +
-                (isBlocked
-                  ? "bg-slate-50 border-slate-200 opacity-75 cursor-not-allowed"
-                  : "bg-white border-slate-300 hover:shadow-xl hover:border-indigo-300 hover:scale-[1.02] focus:outline-none focus:ring-4 focus:ring-indigo-300/50 cursor-pointer")
-              }
+              className={minimal
+                ? "aspect-[1/1] border border-slate-300 bg-white p-2 text-left hover:bg-slate-50"
+                : "aspect-square rounded-2xl border p-4 lg:p-5 xl:p-6 flex flex-col items-start justify-between transition-all duration-200 text-left min-h-[100px] lg:min-h-[120px] xl:min-h-[140px] " +
+                  (isBlocked
+                    ? "bg-slate-50 border-slate-200 opacity-75 cursor-not-allowed"
+                    : "bg-white border-slate-300 hover:shadow-xl hover:border-indigo-300 hover:scale-[1.02] focus:outline-none focus:ring-4 focus:ring-indigo-300/50 cursor-pointer")}
+              title={!isBlocked && person ? person : holiday ? holiday.nome : undefined}
             >
-              <div className="flex items-center justify-between w-full text-base lg:text-lg text-slate-700 font-medium">
-                <span className="text-xl lg:text-2xl xl:text-3xl font-bold">{cell.getDate()}</span>
-                {holiday && (
-                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200 text-xs font-medium">
-                    🎉
-                  </span>
-                )}
-              </div>
-              {!isBlocked && person && (
-                <div
-                  className="text-sm lg:text-base xl:text-lg font-bold text-slate-800 w-full px-3 py-2 lg:py-3 rounded-xl mt-3 border break-words text-center leading-tight"
-                  title={person}
-                  style={{ 
-                    backgroundColor: hashToHsl(person),
-                    borderColor: `hsl(${(() => {
-                      let h = 0;
-                      for (let i = 0; i < person.length; i++) h = (h * 31 + person.charCodeAt(i)) >>> 0;
-                      return h % 360;
-                    })()} 60% 70%)`
-                  }}
-                >
-                  {person}
-                  {overridePerson && <span className="text-sm ml-1 opacity-80">✏️</span>}
-                </div>
-              )}
-              {holiday && (
-                <div className="text-xs lg:text-sm text-slate-600 mt-auto line-clamp-2 font-medium" title={holiday.nome}>
-                  {holiday.nome}
-                </div>
+              {minimal ? (
+                <div className="text-sm text-slate-800 font-medium">{cell.getDate()}</div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between w-full text-base lg:text-lg text-slate-700 font-medium">
+                    <span className="text-xl lg:text-2xl xl:text-3xl font-bold">{cell.getDate()}</span>
+                    {holiday && (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200 text-xs font-medium">
+                        🎉
+                      </span>
+                    )}
+                  </div>
+                  {!isBlocked && person && (
+                    <div
+                      className="text-sm lg:text-base xl:text-lg font-bold text-slate-800 w-full px-3 py-2 lg:py-3 rounded-xl mt-3 border break-words text-center leading-tight"
+                      title={person}
+                      style={{ 
+                        backgroundColor: hashToHsl(person),
+                        borderColor: `hsl(${(() => {
+                          let h = 0;
+                          for (let i = 0; i < person.length; i++) h = (h * 31 + person.charCodeAt(i)) >>> 0;
+                          return h % 360;
+                        })()} 60% 70%)`
+                      }}
+                    >
+                      {person}
+                      {overridePerson && <span className="text-sm ml-1 opacity-80">✏️</span>}
+                    </div>
+                  )}
+                  {holiday && (
+                    <div className="text-xs lg:text-sm text-slate-600 mt-auto line-clamp-2 font-medium" title={holiday.nome}>
+                      {holiday.nome}
+                    </div>
+                  )}
+                </>
               )}
             </button>
           );
@@ -439,6 +472,9 @@ export default function BreakfastDutyCalendar() {
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [selectedMonths, setSelectedMonths] = useState<Set<string>>(new Set(['setembro', 'outubro', 'novembro', 'dezembro']));
   const [randomMode, setRandomMode] = useState(true); // Modo aleatório ativado por padrão
+  const today = new Date();
+  const [currentYear, setCurrentYear] = useState(today.getFullYear());
+  const [currentMonth, setCurrentMonth] = useState(today.getMonth());
 
   // Load overrides
   useEffect(() => {
@@ -473,6 +509,19 @@ export default function BreakfastDutyCalendar() {
   ];
 
   const monthsForAssignment = months.map(m => ({ year: m.year, month: m.month }));
+
+  const monthNamesLong = [
+    'janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'
+  ];
+  const minimalTitle = `${monthNamesLong[currentMonth].toUpperCase()} ${currentYear}`;
+  function goPrevMonth() {
+    const m = currentMonth - 1;
+    if (m < 0) { setCurrentMonth(11); setCurrentYear(currentYear - 1); } else { setCurrentMonth(m); }
+  }
+  function goNextMonth() {
+    const m = currentMonth + 1;
+    if (m > 11) { setCurrentMonth(0); setCurrentYear(currentYear + 1); } else { setCurrentMonth(m); }
+  }
 
   const getOverride = (iso: string) => overrides[iso] || "";
   const applyOverride = (iso: string, person: string) => setOverrides((prev) => ({ ...prev, [iso]: person }));
@@ -638,27 +687,27 @@ export default function BreakfastDutyCalendar() {
           </div>
         </div>
 
-        {/* Calendars */}
-        <div className="mt-8 grid xl:grid-cols-2 gap-8">
-          {months.map((m) => (
-            <div 
-              key={m.title} 
-              className={selectedMonths.has(m.key) ? '' : 'print:hidden'}
-            >
-              <MonthCard
-                title={m.title}
-                year={m.year}
-                month={m.month}
-                startMonday={startMonday}
-                people={people}
-                getOverride={getOverride}
-                onEditDay={(iso, current) => setEditing({ iso, person: current })}
-                randomMode={randomMode}
-                overrides={overrides}
-                months={monthsForAssignment}
-              />
-            </div>
-          ))}
+        {/* Calendário — Mês único, estilo minimalista da referência */}
+        <div className="mt-8 max-w-[1100px] mx-auto">
+          <div className="flex items-center justify-between mb-4">
+            <button onClick={() => goPrevMonth()} className="px-4 py-2 rounded-lg border bg-white hover:bg-slate-50">◀</button>
+            <div className="text-lg font-semibold text-slate-800">{minimalTitle}</div>
+            <button onClick={() => goNextMonth()} className="px-4 py-2 rounded-lg border bg-white hover:bg-slate-50">▶</button>
+          </div>
+          <MonthCard
+            title={minimalTitle}
+            year={currentYear}
+            month={currentMonth}
+            startMonday={startMonday}
+            people={people}
+            getOverride={getOverride}
+            onEditDay={(iso, current) => setEditing({ iso, person: current })}
+            randomMode={randomMode}
+            overrides={overrides}
+            months={[{year: currentYear, month: currentMonth}]}
+            minimal={true}
+            sundayFirst={true}
+          />
         </div>
 
         <footer className="text-center mt-16 print:mt-8">

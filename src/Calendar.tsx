@@ -275,21 +275,31 @@ function filterOverridesByPeople(overrides: Record<string, string>, people: stri
 function Legend({ people }: { people: string[] }) {
   if (!people.length) return null;
   return (
-    <div className="flex flex-wrap items-center gap-2 text-xs">
-      {people.map((p) => (
-        <span
-          key={p}
-          className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full border text-slate-700"
-          style={{ backgroundColor: hashToHsl(p) }}
-          title={p}
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-slate-600/70" />
-          {p}
-        </span>
-      ))}
-      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-amber-50 text-amber-700 border border-amber-200 ms-1">
-        <span className="w-1.5 h-1.5 rounded-full bg-amber-600/70" /> Feriados BR + ES + Vitória ignorados
-      </span>
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-3">
+        {people.map((p) => (
+          <span
+            key={p}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border-2 text-slate-700 font-medium text-sm hover:scale-105 transition-transform"
+            style={{ 
+              backgroundColor: hashToHsl(p),
+              borderColor: `hsl(${(() => {
+                let h = 0;
+                for (let i = 0; i < p.length; i++) h = (h * 31 + p.charCodeAt(i)) >>> 0;
+                return h % 360;
+              })()} 60% 70%)`
+            }}
+            title={p}
+          >
+            <span className="w-2 h-2 rounded-full bg-slate-600/70" />
+            {p}
+          </span>
+        ))}
+      </div>
+      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-50 text-amber-700 border-2 border-amber-200 text-sm font-medium">
+        <span className="w-2 h-2 rounded-full bg-amber-600/70" /> 
+        Feriados BR + ES + Vitória são ignorados
+      </div>
     </div>
   );
 }
@@ -297,12 +307,17 @@ function Legend({ people }: { people: string[] }) {
 function Modal({ open, onClose, children, title }: { open: boolean; onClose: () => void; children: React.ReactNode; title: string }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-md rounded-2xl border bg-white p-5 shadow-xl">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-semibold">{title}</h3>
-          <button onClick={onClose} className="px-2 py-1 rounded-md border text-slate-600">Fechar</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-lg rounded-3xl border-2 bg-white p-8 shadow-2xl">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-2xl font-bold text-slate-800">{title}</h3>
+          <button 
+            onClick={onClose} 
+            className="px-4 py-2 rounded-xl border-2 text-slate-600 hover:bg-slate-50 transition-colors font-medium"
+          >
+            ✕ Fechar
+          </button>
         </div>
         {children}
       </div>
@@ -321,26 +336,26 @@ function MonthCard({
   const weeks = useMemo(() => monthMatrix(year, month), [year, month]);
 
   return (
-    <div className="break-inside-avoid rounded-3xl shadow-2xl p-6 md:p-8 bg-white border border-slate-200/50">
-      <div className="flex items-center justify-between mb-6">
+    <div className="break-inside-avoid rounded-3xl shadow-2xl p-6 lg:p-8 xl:p-10 bg-white border border-slate-200/50 h-full">
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-800">{title}</h2>
-          <p className="text-sm text-slate-500 mt-2">Rotação desde {formatISO(startMonday)}</p>
+          <h2 className="text-3xl lg:text-4xl xl:text-5xl font-bold tracking-tight text-slate-800">{title}</h2>
+          <p className="text-base text-slate-500 mt-3">Rotação desde {formatISO(startMonday)}</p>
         </div>
         <div className="text-right">
-          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-100 text-indigo-800 text-sm font-medium border border-indigo-200">
+          <span className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-indigo-100 text-indigo-800 text-base font-medium border border-indigo-200">
             ☕ Café da manhã
           </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-3 text-center text-sm font-semibold text-slate-700 mb-4">
+      <div className="grid grid-cols-7 gap-4 lg:gap-6 text-center text-base font-semibold text-slate-700 mb-6">
         {["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"].map((w) => (
-          <div key={w} className="py-3 uppercase tracking-wide bg-slate-50 rounded-lg">{w}</div>
+          <div key={w} className="py-4 lg:py-5 uppercase tracking-wide bg-slate-50 rounded-xl text-lg">{w}</div>
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-3 text-base mt-4">
+      <div className="grid grid-cols-7 gap-4 lg:gap-6 text-base mt-6">
         {weeks.flat().map((cell, i) => {
           if (!cell)
             return (
@@ -370,23 +385,23 @@ function MonthCard({
               onClick={() => !isBlocked && onEditDay(iso, person)}
               key={i}
               className={
-                "aspect-square rounded-2xl border p-3 flex flex-col items-start justify-between transition-all duration-200 text-left min-h-[80px] " +
+                "aspect-square rounded-2xl border p-4 lg:p-5 xl:p-6 flex flex-col items-start justify-between transition-all duration-200 text-left min-h-[100px] lg:min-h-[120px] xl:min-h-[140px] " +
                 (isBlocked
                   ? "bg-slate-50 border-slate-200 opacity-75 cursor-not-allowed"
-                  : "bg-white border-slate-300 hover:shadow-lg hover:border-indigo-300 hover:scale-105 focus:outline-none focus:ring-3 focus:ring-indigo-300/50 cursor-pointer")
+                  : "bg-white border-slate-300 hover:shadow-xl hover:border-indigo-300 hover:scale-[1.02] focus:outline-none focus:ring-4 focus:ring-indigo-300/50 cursor-pointer")
               }
             >
-              <div className="flex items-center justify-between w-full text-sm text-slate-700 font-medium">
-                <span className="text-lg font-bold">{cell.getDate()}</span>
+              <div className="flex items-center justify-between w-full text-base lg:text-lg text-slate-700 font-medium">
+                <span className="text-xl lg:text-2xl xl:text-3xl font-bold">{cell.getDate()}</span>
                 {holiday && (
                   <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200 text-xs font-medium">
-                    🎉 Feriado
+                    🎉
                   </span>
                 )}
               </div>
               {!isBlocked && person && (
                 <div
-                  className="text-xs font-bold text-slate-800 w-full px-2 py-1.5 rounded-lg mt-2 border break-words text-center leading-tight"
+                  className="text-sm lg:text-base xl:text-lg font-bold text-slate-800 w-full px-3 py-2 lg:py-3 rounded-xl mt-3 border break-words text-center leading-tight"
                   title={person}
                   style={{ 
                     backgroundColor: hashToHsl(person),
@@ -398,11 +413,11 @@ function MonthCard({
                   }}
                 >
                   {person}
-                  {overridePerson && <span className="text-xs ml-1 opacity-80">✏️</span>}
+                  {overridePerson && <span className="text-sm ml-1 opacity-80">✏️</span>}
                 </div>
               )}
               {holiday && (
-                <div className="text-xs text-slate-600 mt-auto line-clamp-2 font-medium" title={holiday.nome}>
+                <div className="text-xs lg:text-sm text-slate-600 mt-auto line-clamp-2 font-medium" title={holiday.nome}>
                   {holiday.nome}
                 </div>
               )}
@@ -487,122 +502,144 @@ export default function BreakfastDutyCalendar() {
   const manualOverridesCount = Object.keys(overrides).length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-slate-100 text-slate-900 p-4 md:p-8">
-      <div className="max-w-[1600px] mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-slate-100 text-slate-900">
+      <div className="container mx-auto px-4 py-6 lg:px-6 xl:px-8 max-w-full">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-8">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+        <div className="text-center mb-12 lg:mb-16">
+          <div className="max-w-4xl mx-auto">
+            <h1 className="text-5xl lg:text-6xl xl:text-7xl font-bold tracking-tight bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 bg-clip-text text-transparent mb-6">
               ☕ Calendário de Lanche JL
             </h1>
-            <p className="text-slate-600 mt-2 text-base">
-              {randomMode ? (
-                <>
-                  Distribuição <b>aleatória</b> em dias úteis (Seg–Sex), pulando feriados <b>BR + ES + Vitória</b>.
-                  <br />
-                  <span className="text-emerald-600 font-medium">🎯 Sem repetição na mesma semana • Máximo 2x por mês</span>
-                </>
-              ) : (
-                <>
-                  Rodízio <b>sequencial</b> em dias úteis (Seg–Sex), pulando feriados <b>BR + ES + Vitória</b>.
-                  <br />
-                  <span className="text-blue-600 font-medium">🔄 Rotação em ordem da lista</span>
-                </>
-              )}
-              <br />
-              <span className="text-indigo-600 font-medium">💡 Clique em qualquer dia para trocar manualmente</span>
-            </p>
-          </div>
-
-          <div className="flex gap-2 print:hidden">
-            <button 
-              onClick={() => setShowPrintModal(true)} 
-              disabled={printLoading}
-              className="px-4 py-2 rounded-xl border bg-white hover:bg-slate-50 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {printLoading ? (
-                <>
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                  </svg>
-                  Imprimindo...
-                </>
-              ) : (
-                <>
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                  </svg>
-                  Imprimir
-                </>
-              )}
-            </button>
-            <button 
-              onClick={() => setShowClearConfirm(true)} 
-              disabled={manualOverridesCount === 0}
-              className="px-3 py-2 rounded-xl border bg-white hover:bg-slate-50 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2" 
-              title={`Remover todas as ${manualOverridesCount} trocas manuais`}
-            >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-              Limpar trocas
-              {manualOverridesCount > 0 && (
-                <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full">
-                  {manualOverridesCount}
+            <div className="bg-white rounded-3xl shadow-2xl p-6 lg:p-8 border border-slate-200/50">
+              <p className="text-slate-600 text-lg lg:text-xl leading-relaxed">
+                {randomMode ? (
+                  <>
+                    Distribuição <span className="font-bold text-emerald-700">aleatória</span> em dias úteis (Seg–Sex), pulando feriados <span className="font-bold">BR + ES + Vitória</span>.
+                    <br />
+                    <span className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-emerald-100 text-emerald-700 rounded-full font-semibold">
+                      🎯 Sem repetição na mesma semana • Máximo 2x por mês
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    Rodízio <span className="font-bold text-blue-700">sequencial</span> em dias úteis (Seg–Sex), pulando feriados <span className="font-bold">BR + ES + Vitória</span>.
+                    <br />
+                    <span className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-blue-100 text-blue-700 rounded-full font-semibold">
+                      🔄 Rotação em ordem da lista
+                    </span>
+                  </>
+                )}
+                <br />
+                <span className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-indigo-100 text-indigo-700 rounded-full font-semibold">
+                  💡 Clique em qualquer dia para trocar manualmente
                 </span>
-              )}
-            </button>
+              </p>
+            </div>
           </div>
         </div>
 
+        {/* Action Buttons */}
+        <div className="flex justify-center gap-6 mb-12 print:hidden">
+          <button 
+            onClick={() => setShowPrintModal(true)} 
+            disabled={printLoading}
+            className="px-8 py-4 rounded-2xl border-2 bg-white hover:bg-slate-50 shadow-xl hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3 text-lg font-semibold transition-all hover:scale-105"
+          >
+            {printLoading ? (
+              <>
+                <svg className="animate-spin h-6 w-6" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                </svg>
+                Imprimindo...
+              </>
+            ) : (
+              <>
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                🖨️ Imprimir
+              </>
+            )}
+          </button>
+          <button 
+            onClick={() => setShowClearConfirm(true)} 
+            disabled={manualOverridesCount === 0}
+            className="px-8 py-4 rounded-2xl border-2 bg-white hover:bg-slate-50 shadow-xl hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3 text-lg font-semibold transition-all hover:scale-105" 
+            title={`Remover todas as ${manualOverridesCount} trocas manuais`}
+          >
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            🗑️ Limpar trocas
+            {manualOverridesCount > 0 && (
+              <span className="inline-flex items-center justify-center px-3 py-1 text-sm font-bold leading-none text-red-100 bg-red-600 rounded-full">
+                {manualOverridesCount}
+              </span>
+            )}
+          </button>
+        </div>
+
         {/* Config Panel */}
-        <div className="grid md:grid-cols-4 gap-6 print:hidden mb-10">
-          <div className="rounded-2xl border bg-white p-4 shadow">
-            <label className="block text-sm font-medium mb-1">Data de início</label>
-            <input type="date" value={startISO} onChange={(e) => setStartISO(e.target.value)} className="w-full border rounded-xl px-3 py-2" />
-            <p className="text-xs text-slate-500 mt-2">Padrão: 2025-08-25 (segunda).</p>
+        <div className="grid lg:grid-cols-4 gap-8 print:hidden mb-12">
+          <div className="rounded-3xl border bg-white p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-shadow">
+            <label className="block text-lg font-semibold mb-4 text-slate-800">📅 Data de início</label>
+            <input 
+              type="date" 
+              value={startISO} 
+              onChange={(e) => setStartISO(e.target.value)} 
+              className="w-full border-2 rounded-xl px-4 py-3 text-lg focus:border-indigo-500 focus:outline-none transition-colors" 
+            />
+            <p className="text-sm text-slate-500 mt-3">Padrão: 2025-08-25 (segunda)</p>
           </div>
-          <div className="rounded-2xl border bg-white p-4 shadow">
-            <label className="block text-sm font-medium mb-3">Modo de distribuição</label>
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 cursor-pointer">
+          
+          <div className="rounded-3xl border bg-white p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-shadow">
+            <label className="block text-lg font-semibold mb-4 text-slate-800">⚙️ Modo de distribuição</label>
+            <div className="space-y-4">
+              <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl hover:bg-slate-50 transition-colors">
                 <input
                   type="radio"
                   name="mode"
                   checked={randomMode}
                   onChange={() => setRandomMode(true)}
-                  className="w-4 h-4 text-indigo-600"
+                  className="w-5 h-5 text-indigo-600"
                 />
-                <span className="text-sm">🎲 Aleatório</span>
+                <span className="text-base font-medium">🎲 Aleatório</span>
               </label>
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl hover:bg-slate-50 transition-colors">
                 <input
                   type="radio"
                   name="mode"
                   checked={!randomMode}
                   onChange={() => setRandomMode(false)}
-                  className="w-4 h-4 text-indigo-600"
+                  className="w-5 h-5 text-indigo-600"
                 />
-                <span className="text-sm">🔄 Sequencial</span>
+                <span className="text-base font-medium">🔄 Sequencial</span>
               </label>
             </div>
-            <p className="text-xs text-slate-500 mt-2">
+            <p className="text-sm text-slate-500 mt-4 p-3 bg-slate-50 rounded-lg">
               {randomMode ? "Distribuição aleatória respeitando restrições" : "Rotação em ordem sequencial"}
             </p>
           </div>
-          <div className="rounded-2xl border bg-white p-4 shadow md:col-span-2">
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium">Pessoas (uma por linha)</label>
-              <span className="text-xs text-slate-500">Recomendado: até 10</span>
+          
+          <div className="rounded-3xl border bg-white p-6 lg:p-8 shadow-xl hover:shadow-2xl transition-shadow lg:col-span-2">
+            <div className="flex items-center justify-between mb-4">
+              <label className="block text-lg font-semibold text-slate-800">👥 Pessoas</label>
+              <span className="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full">Recomendado: até 10</span>
             </div>
-            <textarea value={namesText} onChange={(e) => setNamesText(e.target.value)} rows={7} className="w-full border rounded-xl px-3 py-2 font-mono text-sm" />
-            <div className="mt-3"><Legend people={people} /></div>
+            <textarea 
+              value={namesText} 
+              onChange={(e) => setNamesText(e.target.value)} 
+              rows={8} 
+              placeholder="Digite um nome por linha..."
+              className="w-full border-2 rounded-xl px-4 py-3 font-mono text-base focus:border-indigo-500 focus:outline-none transition-colors resize-none" 
+            />
+            <div className="mt-4"><Legend people={people} /></div>
           </div>
         </div>
 
         {/* Calendars */}
-        <div className="mt-8 grid lg:grid-cols-2 gap-8">
+        <div className="mt-8 grid xl:grid-cols-2 gap-8">
           {months.map((m) => (
             <div 
               key={m.title} 
@@ -624,29 +661,46 @@ export default function BreakfastDutyCalendar() {
           ))}
         </div>
 
-        <footer className="text-center text-xs text-slate-500 mt-8 print:mt-2">
-          JL · Sistema de escala · impresso em {new Date().toLocaleDateString()}
+        <footer className="text-center mt-16 print:mt-8">
+          <div className="bg-white rounded-3xl shadow-xl p-6 mx-auto max-w-2xl border border-slate-200/50">
+            <p className="text-lg font-semibold text-slate-700 mb-2">
+              ☕ Sistema de Escala JL
+            </p>
+            <p className="text-sm text-slate-500">
+              Desenvolvido com ❤️ • Impresso em {new Date().toLocaleDateString('pt-BR')}
+            </p>
+          </div>
         </footer>
       </div>
 
       {/* Modal de troca manual */}
       <Modal open={!!editing} onClose={() => setEditing(null)} title={editing ? `Trocar responsável – ${editing.iso}` : ""}>
         {editing && (
-          <div className="space-y-3">
-            <label className="block text-sm">Selecionar pessoa</label>
+          <div className="space-y-4">
+            <label className="block text-lg font-semibold text-slate-800">👤 Selecionar pessoa</label>
             <select
               value={editing.person || ""}
               onChange={(e) => setEditing((prev) => prev ? { iso: prev.iso, person: e.target.value } : null)}
-              className="w-full border rounded-xl px-3 py-2"
+              className="w-full border-2 rounded-xl px-4 py-3 text-lg focus:border-indigo-500 focus:outline-none transition-colors"
             >
               <option value="">— Sem responsável —</option>
               {people.map((p) => (
                 <option key={p} value={p}>{p}</option>
               ))}
             </select>
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button onClick={() => { if (editing) { clearOverride(editing.iso); setEditing(null); } }} className="px-3 py-2 rounded-xl border bg-white hover:bg-slate-50">Limpar dia</button>
-              <button onClick={() => { if (editing?.person) applyOverride(editing.iso, editing.person); setEditing(null); }} className="px-4 py-2 rounded-xl border bg-indigo-600 text-white hover:bg-indigo-700">Salvar</button>
+            <div className="flex items-center justify-end gap-4 pt-6">
+              <button 
+                onClick={() => { if (editing) { clearOverride(editing.iso); setEditing(null); } }} 
+                className="px-6 py-3 rounded-xl border-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold transition-all hover:scale-105"
+              >
+                🗑️ Limpar dia
+              </button>
+              <button 
+                onClick={() => { if (editing?.person) applyOverride(editing.iso, editing.person); setEditing(null); }} 
+                className="px-6 py-3 rounded-xl border-2 bg-indigo-600 text-white hover:bg-indigo-700 font-semibold transition-all hover:scale-105"
+              >
+                ✅ Salvar
+              </button>
             </div>
           </div>
         )}
@@ -766,6 +820,10 @@ export default function BreakfastDutyCalendar() {
           /* Ajusta tamanhos para impressão */
           .text-2xl { font-size: 1.5rem !important; }
           .text-3xl { font-size: 1.875rem !important; }
+          .text-4xl { font-size: 2rem !important; }
+          .text-5xl { font-size: 2.5rem !important; }
+          .text-6xl { font-size: 3rem !important; }
+          .text-7xl { font-size: 3.5rem !important; }
           
           /* Melhora contraste dos chips */
           .rounded-full {

@@ -22,7 +22,7 @@ const DEFAULT_NAMES = [
   "clebio",
   "everton",
   "luiz",
-  "danilo",
+  "",
 ];
 
 // Datas alvo
@@ -411,7 +411,7 @@ function MonthCard({
               onClick={() => !isBlocked && onEditDay(iso, person)}
               key={i}
               className={minimal
-                ? "aspect-[1/1] border border-slate-300 bg-white p-2 text-left hover:bg-slate-50"
+                ? ("aspect-[1/1] border border-slate-300 " + (holiday ? "bg-amber-50" : "bg-white") + " p-2 text-left hover:bg-slate-50")
                 : "aspect-square rounded-2xl border p-4 lg:p-5 xl:p-6 flex flex-col items-start justify-between transition-all duration-200 text-left min-h-[100px] lg:min-h-[120px] xl:min-h-[140px] " +
                   (isBlocked
                     ? "bg-slate-50 border-slate-200 opacity-75 cursor-not-allowed"
@@ -423,6 +423,11 @@ function MonthCard({
                   <div className="text-sm text-slate-800 font-medium">{cell.getDate()}</div>
                   {!isBlocked && person && (
                     <div className="mt-1 text-[10px] text-slate-700 leading-tight pr-1 line-clamp-2">{person}</div>
+                  )}
+                  {holiday && (
+                    <div className="mt-auto text-[10px] text-amber-700 font-semibold leading-tight pr-1">
+                      🎉 {holiday.nome}
+                    </div>
                   )}
                 </div>
               ) : (

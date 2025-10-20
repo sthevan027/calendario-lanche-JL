@@ -11,28 +11,10 @@ import React, { useMemo, useState, useEffect } from "react";
  * • Testes rápidos no console (ativar com ?test=1 ou em localhost)
  */
 
-// Util: nomes fornecidos (editáveis pela UI)
-const DEFAULT_NAMES = [
-  "elielton",
-  "elisandro",
-  "sthevan",
-  "silvo",
-  "jacquisley",
-  "reginaldo",
-  "clebio",
-  "everton",
-  "luiz",
-  "",
-];
-
-// Datas alvo
-const SEP_2025 = { year: 2025, month: 8 }; // Setembro
-const OCT_2025 = { year: 2025, month: 9 }; // Outubro
-const NOV_2025 = { year: 2025, month: 10 }; // Novembro
-const DEC_2025 = { year: 2025, month: 11 }; // Dezembro
-
 // Segunda padrão: 2025-08-25
 const DEFAULT_START_ISO = "2025-08-25";
+const NAMES_STORAGE_KEY = "breakfast_names";
+const OVERRIDES_STORAGE_KEY = "breakfast_overrides_2025";
 
 // ------------------------------
 // FERIADOS (Nacionais + ES + Vitória) – 2025
@@ -189,14 +171,15 @@ function seededRandom(seed: string): number {
 function assignmentIndex(startMonday: Date, targetDate: Date, peopleCount: number) {
   // Índice rotativo baseado nos DIAS DE ESCALA transcorridos desde o start
   if (!isDutyDay(targetDate)) return null;
+  if (!peopleCount || peopleCount <= 0) return null;
   const prevDay = addDays(targetDate, -1);
   const dutyUntilPrev = dutyDaysCountBetween(startMonday, prevDay);
-  return peopleCount > 0 ? dutyUntilPrev % peopleCount : 0;
+  return dutyUntilPrev % peopleCount;
 }
 
 function randomAssignment(
-  targetDate: Date, 
-  people: string[], 
+  targetDate: Date,
+  people: string[],
   overrides: Record<string, string>,
   months: Array<{ year: number; month: number }>
 ): string | null {
@@ -271,6 +254,26 @@ function randomAssignment(
   }
   
   return allAssignments[formatISO(targetDate)] || null;
+}
+
+function getNextMonths(startISO: string) {
+  const startDate = new Date(startISO + "T00:00:00");
+  const isValid = !Number.isNaN(startDate.getTime());
+  const baseDate = isValid ? startDate : new Date();
+
+  return Array.from({ length: 4 }, (_, index) => {
+    const date = new Date(baseDate.getFullYear(), baseDate.getMonth() + index, 1);
+    const monthName = date.toLocaleDateString("pt-BR", { month: "long" });
+    const titleRaw = date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+    const title = titleRaw.replace(/^./, (char) => char.toUpperCase());
+
+    return {
+      title,
+      year: date.getFullYear(),
+      month: date.getMonth(),
+      key: monthName.toLowerCase(),
+    };
+  });
 }
 
 function hashToHsl(str: string) {
@@ -398,8 +401,8 @@ function MonthCard({
             if (randomMode) {
               autoPerson = randomAssignment(cell, people, overrides, months) || "";
             } else {
-              const idx = assignmentIndex(startMonday, cell, people.length || 1);
-              autoPerson = idx !== null ? people[idx] : "";
+              const idx = assignmentIndex(startMonday, cell, people.length);
+              autoPerson = idx !== null && idx < people.length ? people[idx] : "";
             }
           }
           const overridePerson = getOverride(iso);
@@ -473,31 +476,63 @@ function MonthCard({
 }
 
 export default function BreakfastDutyCalendar() {
-  const [namesText, setNamesText] = useState(DEFAULT_NAMES.join("\n"));
+  const [namesText, setNamesText] = useState("");
   const [startISO, setStartISO] = useState(DEFAULT_START_ISO);
   const [overrides, setOverrides] = useState<Record<string, string>>({}); // { 'YYYY-MM-DD': 'nome' }
   const [editing, setEditing] = useState<{ iso: string; person: string } | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [printLoading, setPrintLoading] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
-  const [selectedMonths, setSelectedMonths] = useState<Set<string>>(new Set(['setembro', 'outubro', 'novembro', 'dezembro']));
+  const [selectedMonths, setSelectedMonths] = useState<Set<string>>(() => new Set(getNextMonths(DEFAULT_START_ISO).map((m) => m.key)));
   const [randomMode, setRandomMode] = useState(true); // Modo aleatório ativado por padrão
   const today = new Date();
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [printingMode, setPrintingMode] = useState(false);
 
+  useEffect(() => {
+    try {
+      const storedNames = localStorage.getItem(NAMES_STORAGE_KEY);
+      if (storedNames) {
+        setNamesText(storedNames);
+      }
+    } catch (_) {
+      setNamesText("");
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      const sanitized = namesText
+        .split(/\r?\n/)
+        .map((name) => name.trim())
+        .filter(Boolean)
+        .join("\n");
+
+      if (sanitized) {
+        localStorage.setItem(NAMES_STORAGE_KEY, sanitized);
+      } else {
+        localStorage.removeItem(NAMES_STORAGE_KEY);
+      }
+    } catch (_) {}
+  }, [namesText]);
+
   // Load overrides
   useEffect(() => {
     try {
-      const raw = localStorage.getItem("breakfast_overrides_2025");
+      const raw = localStorage.getItem(OVERRIDES_STORAGE_KEY);
       if (raw) setOverrides(JSON.parse(raw));
     } catch (_) {}
   }, []);
   // Save overrides
   useEffect(() => {
     try {
-      localStorage.setItem("breakfast_overrides_2025", JSON.stringify(overrides));
+      const entries = Object.keys(overrides);
+      if (entries.length) {
+        localStorage.setItem(OVERRIDES_STORAGE_KEY, JSON.stringify(overrides));
+      } else {
+        localStorage.removeItem(OVERRIDES_STORAGE_KEY);
+      }
     } catch (_) {}
   }, [overrides]);
 
@@ -511,15 +546,28 @@ export default function BreakfastDutyCalendar() {
     setOverrides((prev) => filterOverridesByPeople(prev, people));
   }, [people]);
 
-  const startMonday = useMemo(() => new Date(startISO + "T00:00:00"), [startISO]);
-  const months = [
-    { title: "Setembro/2025", year: SEP_2025.year, month: SEP_2025.month, key: 'setembro' },
-    { title: "Outubro/2025", year: OCT_2025.year, month: OCT_2025.month, key: 'outubro' },
-    { title: "Novembro/2025", year: NOV_2025.year, month: NOV_2025.month, key: 'novembro' },
-    { title: "Dezembro/2025", year: DEC_2025.year, month: DEC_2025.month, key: 'dezembro' },
-  ];
+  useEffect(() => {
+    if (people.length === 0 && Object.keys(overrides).length > 0) {
+      setOverrides({});
+    }
+    if (people.length === 0) {
+      try {
+        localStorage.removeItem(OVERRIDES_STORAGE_KEY);
+      } catch (_) {}
+    }
+  }, [people, overrides]);
 
-  const monthsForAssignment = months.map(m => ({ year: m.year, month: m.month }));
+  const startMonday = useMemo(() => new Date(startISO + "T00:00:00"), [startISO]);
+  const months = useMemo(() => getNextMonths(startISO), [startISO]);
+
+  useEffect(() => {
+    setSelectedMonths(new Set(months.map((m) => m.key)));
+  }, [months]);
+
+  const monthsForAssignment = useMemo(
+    () => months.map((m) => ({ year: m.year, month: m.month })),
+    [months]
+  );
 
   const monthNamesLong = [
     'janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'
@@ -539,7 +587,19 @@ export default function BreakfastDutyCalendar() {
   const clearOverride = (iso: string) => setOverrides((prev) => { const n = { ...prev }; delete n[iso]; return n; });
   const clearAllOverrides = () => {
     setOverrides({});
+    try {
+      localStorage.removeItem(OVERRIDES_STORAGE_KEY);
+    } catch (_) {}
     setShowClearConfirm(false);
+  };
+
+  const handleClearPeople = () => {
+    setNamesText("");
+    setOverrides({});
+    try {
+      localStorage.removeItem(NAMES_STORAGE_KEY);
+      localStorage.removeItem(OVERRIDES_STORAGE_KEY);
+    } catch (_) {}
   };
 
   // Função de impressão melhorada
@@ -681,13 +741,20 @@ export default function BreakfastDutyCalendar() {
               <label className="block text-lg font-semibold text-slate-800">👥 Pessoas</label>
               <span className="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full">Recomendado: até 10</span>
             </div>
-            <textarea 
-              value={namesText} 
-              onChange={(e) => setNamesText(e.target.value)} 
-              rows={8} 
+            <textarea
+              value={namesText}
+              onChange={(e) => setNamesText(e.target.value)}
+              rows={8}
               placeholder="Digite um nome por linha..."
-              className="w-full border-2 rounded-xl px-4 py-3 font-mono text-base focus:border-indigo-500 focus:outline-none transition-colors resize-none" 
+              className="w-full border-2 rounded-xl px-4 py-3 font-mono text-base focus:border-indigo-500 focus:outline-none transition-colors resize-none"
             />
+            <button
+              type="button"
+              onClick={handleClearPeople}
+              className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-red-200 bg-red-50 text-red-700 font-semibold hover:bg-red-100 transition-colors"
+            >
+              🧹 Limpar lista de pessoas
+            </button>
             <div className="mt-4"><Legend people={people} /></div>
           </div>
         </div>

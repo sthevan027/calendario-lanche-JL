@@ -11,25 +11,6 @@ import React, { useMemo, useState, useEffect } from "react";
  * • Testes rápidos no console (ativar com ?test=1 ou em localhost)
  */
 
-// Util: nomes fornecidos (editáveis pela UI)
-const DEFAULT_NAMES = [
-  "elielton",
-  "elisandro",
-  "sthevan",
-  "silvo",
-  "jacquisley",
-  "reginaldo",
-  "clebio",
-  "everton",
-  "luiz",
-  "",
-];
-
-// Datas alvo
-const SEP_2025 = { year: 2025, month: 8 }; // Setembro
-const OCT_2025 = { year: 2025, month: 9 }; // Outubro
-const NOV_2025 = { year: 2025, month: 10 }; // Novembro
-const DEC_2025 = { year: 2025, month: 11 }; // Dezembro
 
 // Segunda padrão: 2025-08-25
 const DEFAULT_START_ISO = "2025-08-25";
@@ -289,6 +270,31 @@ function filterOverridesByPeople(overrides: Record<string, string>, people: stri
   return cleaned;
 }
 
+function getNextMonths(startISO: string, count: number) {
+  const startDate = new Date(startISO + "T00:00:00");
+  const currentDate = new Date();
+  const currentMonth = currentDate.getMonth();
+  const currentYear = currentDate.getFullYear();
+  
+  const months = [];
+  for (let i = 0; i < count; i++) {
+    const monthDate = new Date(currentYear, currentMonth + i, 1);
+    const title = monthDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    const monthNames = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 
+                       'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+    const key = monthNames[monthDate.getMonth()];
+    
+    months.push({
+      title,
+      year: monthDate.getFullYear(),
+      month: monthDate.getMonth(),
+      key
+    });
+  }
+  
+  return months;
+}
+
 function Legend({ people }: { people: string[] }) {
   if (!people.length) return null;
   return (
@@ -473,31 +479,56 @@ function MonthCard({
 }
 
 export default function BreakfastDutyCalendar() {
-  const [namesText, setNamesText] = useState(DEFAULT_NAMES.join("\n"));
+  const [namesText, setNamesText] = useState("");
   const [startISO, setStartISO] = useState(DEFAULT_START_ISO);
   const [overrides, setOverrides] = useState<Record<string, string>>({}); // { 'YYYY-MM-DD': 'nome' }
   const [editing, setEditing] = useState<{ iso: string; person: string } | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showClearNamesConfirm, setShowClearNamesConfirm] = useState(false);
   const [printLoading, setPrintLoading] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
-  const [selectedMonths, setSelectedMonths] = useState<Set<string>>(new Set(['setembro', 'outubro', 'novembro', 'dezembro']));
+  const [selectedMonths, setSelectedMonths] = useState<Set<string>>(new Set());
   const [randomMode, setRandomMode] = useState(true); // Modo aleatório ativado por padrão
   const today = new Date();
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [printingMode, setPrintingMode] = useState(false);
 
+  // Load names from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("breakfast_names");
+      if (saved) setNamesText(saved);
+    } catch (_) {}
+  }, []);
+
+  // Save names to localStorage
+  useEffect(() => {
+    try {
+      const trimmed = namesText.trim();
+      if (trimmed) {
+        localStorage.setItem("breakfast_names", trimmed);
+      } else {
+        localStorage.removeItem("breakfast_names");
+      }
+    } catch (_) {}
+  }, [namesText]);
+
   // Load overrides
   useEffect(() => {
     try {
-      const raw = localStorage.getItem("breakfast_overrides_2025");
+      const currentYear = new Date().getFullYear();
+      const key = `breakfast_overrides_${currentYear}`;
+      const raw = localStorage.getItem(key);
       if (raw) setOverrides(JSON.parse(raw));
     } catch (_) {}
   }, []);
   // Save overrides
   useEffect(() => {
     try {
-      localStorage.setItem("breakfast_overrides_2025", JSON.stringify(overrides));
+      const currentYear = new Date().getFullYear();
+      const key = `breakfast_overrides_${currentYear}`;
+      localStorage.setItem(key, JSON.stringify(overrides));
     } catch (_) {}
   }, [overrides]);
 
@@ -512,12 +543,12 @@ export default function BreakfastDutyCalendar() {
   }, [people]);
 
   const startMonday = useMemo(() => new Date(startISO + "T00:00:00"), [startISO]);
-  const months = [
-    { title: "Setembro/2025", year: SEP_2025.year, month: SEP_2025.month, key: 'setembro' },
-    { title: "Outubro/2025", year: OCT_2025.year, month: OCT_2025.month, key: 'outubro' },
-    { title: "Novembro/2025", year: NOV_2025.year, month: NOV_2025.month, key: 'novembro' },
-    { title: "Dezembro/2025", year: DEC_2025.year, month: DEC_2025.month, key: 'dezembro' },
-  ];
+  const months = useMemo(() => getNextMonths(startISO, 2), [startISO]);
+
+  // Inicializa selectedMonths com todos os meses disponíveis
+  useEffect(() => {
+    setSelectedMonths(new Set(months.map(m => m.key)));
+  }, [months]);
 
   const monthsForAssignment = months.map(m => ({ year: m.year, month: m.month }));
 
@@ -540,6 +571,28 @@ export default function BreakfastDutyCalendar() {
   const clearAllOverrides = () => {
     setOverrides({});
     setShowClearConfirm(false);
+  };
+
+  const clearNamesAndOverrides = () => {
+    // Limpar namesText
+    setNamesText("");
+    
+    // Remover breakfast_names do localStorage
+    localStorage.removeItem("breakfast_names");
+    
+    // Remover todas as chaves breakfast_overrides_* do localStorage
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith("breakfast_overrides_")) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    
+    // Limpar overrides
+    setOverrides({});
+    setShowClearNamesConfirm(false);
   };
 
   // Função de impressão melhorada
@@ -630,6 +683,17 @@ export default function BreakfastDutyCalendar() {
                   {manualOverridesCount}
                 </span>
               )}
+            </button>
+            <button 
+              onClick={() => setShowClearNamesConfirm(true)} 
+              disabled={!namesText.trim()}
+              className="px-3 py-2 rounded-xl border bg-white hover:bg-slate-50 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2" 
+              title="Limpar lista de pessoas e todas as trocas"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+              </svg>
+              Limpar lista de pessoas
             </button>
           </div>
         </div>
@@ -839,6 +903,47 @@ export default function BreakfastDutyCalendar() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
               </svg>
               Imprimir {selectedMonths.size} mês{selectedMonths.size !== 1 ? 'es' : ''}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal de confirmação para limpar lista de pessoas */}
+      <Modal open={showClearNamesConfirm} onClose={() => setShowClearNamesConfirm(false)} title="Limpar lista de pessoas">
+        <div className="space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+              <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-lg font-medium text-gray-900">Limpar lista de pessoas?</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Esta ação irá <strong>remover completamente</strong> a lista de pessoas e <strong>todas as trocas manuais</strong> salvas. O calendário voltará ao estado inicial.
+              </p>
+              <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-700 font-medium">
+                  ⚠️ Esta ação não pode ser desfeita!
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center justify-end gap-3 pt-4">
+            <button 
+              onClick={() => setShowClearNamesConfirm(false)} 
+              className="px-4 py-2 rounded-xl border bg-white hover:bg-slate-50 text-gray-700"
+            >
+              Cancelar
+            </button>
+            <button 
+              onClick={clearNamesAndOverrides} 
+              className="px-4 py-2 rounded-xl border bg-red-600 text-white hover:bg-red-700 flex items-center gap-2"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+              </svg>
+              Sim, limpar tudo
             </button>
           </div>
         </div>
